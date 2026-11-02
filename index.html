@@ -111,7 +111,6 @@
             color: var(--text-muted);
         }
 
-        /* Styling Progress Bar */
         .progress-container {
             display: none;
             margin-top: 20px;
@@ -141,7 +140,6 @@
             transition: width 0.3s ease;
         }
 
-        /* Preview & Result Card */
         #resultCard {
             margin-top: 25px;
             background: #141414;
@@ -179,14 +177,22 @@
             text-decoration: none;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
             transition: background 0.2s;
             border: none;
             cursor: pointer;
+            margin-bottom: 8px;
         }
 
         .btn-download:hover {
             background: var(--success-hover);
+        }
+
+        .btn-alt {
+            background: #2b5cff;
+        }
+        .btn-alt:hover {
+            background: #1a49e0;
         }
     </style>
 </head>
@@ -195,19 +201,18 @@
 <div class="container">
     <i class="fab fa-youtube header-icon"></i>
     <h1>YT & YT Music MP3 Downloader</h1>
-    <p class="subtitle">In-App Direct Converter (Powered by Public CORS API)</p>
+    <p class="subtitle">Konversi Audio Cepat (Anti-Stuck Multi-Engine)</p>
 
     <div class="input-group">
-        <input type="text" id="urlInput" placeholder="Tempel link YouTube / YT Music di sini..." autocomplete="off">
-        <button class="btn-convert" id="convertBtn" onclick="startInAppConversion()">
+        <input type="text" id="urlInput" placeholder="Tempel link https://music.youtube.com/watch?v=..." autocomplete="off">
+        <button class="btn-convert" id="convertBtn" onclick="startConversion()">
             <i class="fas fa-sync-alt"></i> Convert
         </button>
     </div>
 
-    <!-- Live Progress Bar -->
     <div class="progress-container" id="progressContainer">
         <div class="progress-label">
-            <span id="progressText">Menyiapkan konversi...</span>
+            <span id="progressText">Menghubungkan server...</span>
             <span id="progressPercent">0%</span>
         </div>
         <div class="progress-bar-bg">
@@ -219,10 +224,20 @@
 
     <div id="resultCard">
         <img id="thumbnail" class="thumb" src="" alt="Thumbnail Lagu">
-        <div id="songTitle" class="song-title">Judul Lagu</div>
-        <a id="downloadLinkBtn" class="btn-download" href="#" target="_blank" download>
+        <div id="songTitle" class="song-title">Lagu Terdeteksi</div>
+
+        <a id="directDlBtn" class="btn-download" href="#" target="_blank" style="display:none;">
             <i class="fas fa-download"></i> Unduh File MP3 Asli
         </a>
+
+        <div id="fallbackSection" style="display:none;">
+            <a id="ssBtn" class="btn-download btn-alt" href="#" target="_blank">
+                <i class="fas fa-bolt"></i> Download via SSYouTube
+            </a>
+            <a id="y2mBtn" class="btn-download" style="background:#e67e22;" href="#" target="_blank">
+                <i class="fas fa-music"></i> Download via Y2Mate
+            </a>
+        </div>
     </div>
 </div>
 
@@ -236,7 +251,18 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    async function startInAppConversion() {
+    async function fetchWithTimeout(resource, options = {}, timeout = 7000) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    }
+
+    async function startConversion() {
         const urlInput = document.getElementById('urlInput').value.trim();
         const statusMsg = document.getElementById('statusMsg');
         const progressContainer = document.getElementById('progressContainer');
@@ -245,93 +271,103 @@
         const progressPercent = document.getElementById('progressPercent');
         const resultCard = document.getElementById('resultCard');
         const thumbnail = document.getElementById('thumbnail');
-        const songTitle = document.getElementById('songTitle');
-        const downloadLinkBtn = document.getElementById('downloadLinkBtn');
+        const directDlBtn = document.getElementById('directDlBtn');
+        const fallbackSection = document.getElementById('fallbackSection');
 
         if (pollInterval) clearInterval(pollInterval);
 
         if (!urlInput) {
             statusMsg.style.color = '#ff4444';
-            statusMsg.innerText = 'Masukkan URL YouTube / YouTube Music terlebih dahulu!';
+            statusMsg.innerText = 'Masukkan URL terlebih dahulu!';
             return;
         }
 
         const videoId = extractVideoId(urlInput);
         if (!videoId) {
             statusMsg.style.color = '#ff4444';
-            statusMsg.innerText = 'URL tidak valid! Pastikan format link YouTube benar.';
+            statusMsg.innerText = 'URL tidak valid!';
             resultCard.style.display = 'none';
             progressContainer.style.display = 'none';
             return;
         }
 
         const cleanYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        
+        thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+        // Set fallback links
+        document.getElementById('ssBtn').href = `https://ssyoutube.com/watch?v=${videoId}`;
+        document.getElementById('y2mBtn').href = `https://y2mate.is/watch?v=${videoId}`;
+
         // Reset UI State
         statusMsg.innerText = '';
         resultCard.style.display = 'none';
+        directDlBtn.style.display = 'none';
+        fallbackSection.style.display = 'none';
         progressContainer.style.display = 'block';
-        progressBarFill.style.width = '5%';
-        progressPercent.innerText = '5%';
-        progressText.innerText = 'Menghubungkan ke API Konversi...';
-
-        thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        progressBarFill.style.width = '15%';
+        progressPercent.innerText = '15%';
+        progressText.innerText = 'Menghubungkan ke API...';
 
         try {
-            // Step 1: Inisialisasi Job Konversi ke Loader.to CORS API
-            const searchApiUrl = `https://loader.to/api/ajax/search.php?format=mp3&url=${encodeURIComponent(cleanYtUrl)}`;
-            const response = await fetch(searchApiUrl);
+            // Mencoba API 1 dengan limit timeout 7 detik
+            const searchUrl = `https://loader.to/api/ajax/search.php?format=mp3&url=${encodeURIComponent(cleanYtUrl)}`;
+            const response = await fetchWithTimeout(searchUrl, {}, 7000);
             const data = await response.json();
 
-            if (!data || !data.id) {
-                throw new Error('Gagal memulai antrean konversi.');
-            }
+            if (!data || !data.id) throw new Error('API Sibuk');
 
             const jobId = data.id;
-            if (data.title) songTitle.innerText = data.title;
+            let attempts = 0;
 
-            // Step 2: Polling Progress Konversi
             pollInterval = setInterval(async () => {
+                attempts++;
                 try {
-                    const progressApiUrl = `https://loader.to/api/ajax/progress.php?id=${jobId}`;
-                    const pRes = await fetch(progressApiUrl);
+                    const progressUrl = `https://loader.to/api/ajax/progress.php?id=${jobId}`;
+                    const pRes = await fetchWithTimeout(progressUrl, {}, 5000);
                     const pData = await pRes.json();
 
-                    if (pData.title) songTitle.innerText = pData.title;
-
                     if (pData.progress) {
-                        // Progress Loader.to dikembalikan dari skala 0 - 1000
-                        const currentPercent = Math.min(Math.round(pData.progress / 10), 100);
-                        progressBarFill.style.width = `${currentPercent}%`;
-                        progressPercent.innerText = `${currentPercent}%`;
-                        progressText.innerText = pData.text || 'Mengonversi Audio MP3...';
+                        const pct = Math.min(Math.round(pData.progress / 10), 100);
+                        progressBarFill.style.width = `${pct}%`;
+                        progressPercent.innerText = `${pct}%`;
+                        progressText.innerText = 'Mengonversi Audio...';
                     }
 
-                    // Step 3: Jika konversi selesai & URL unduhan tersedia
-                    if (pData.download_url || pData.progress >= 1000) {
+                    if (pData.download_url) {
                         clearInterval(pollInterval);
                         progressBarFill.style.width = '100%';
                         progressPercent.innerText = '100%';
-                        progressText.innerText = 'Konversi Selesai!';
 
-                        downloadLinkBtn.href = pData.download_url;
-                        
+                        directDlBtn.href = pData.download_url;
+                        directDlBtn.style.display = 'inline-flex';
+
                         setTimeout(() => {
                             progressContainer.style.display = 'none';
                             resultCard.style.display = 'block';
                             statusMsg.style.color = '#28a745';
-                            statusMsg.innerText = 'File MP3 berhasil dibuat! Klik tombol di bawah untuk mengunduh.';
-                        }, 500);
+                            statusMsg.innerText = 'Konversi Berhasil!';
+                        }, 400);
                     }
-                } catch (err) {
-                    console.warn('Polling status error:', err);
+
+                    // Jika lebih dari 10x polling (15 detik) tidak ada respon download, lempar ke fallback
+                    if (attempts > 10) throw new Error('Timeout Polling');
+
+                } catch (e) {
+                    clearInterval(pollInterval);
+                    activateFallback();
                 }
             }, 1500);
 
         } catch (error) {
+            activateFallback();
+        }
+
+        function activateFallback() {
             progressContainer.style.display = 'none';
-            statusMsg.style.color = '#ff4444';
-            statusMsg.innerText = 'Gagal memproses lagu: ' + error.message;
+            resultCard.style.display = 'block';
+            fallbackSection.style.display = 'block';
+            statusMsg.style.color = '#aaa';
+            statusMsg.innerText = 'API Direct sibuk. Silakan pilih mesin unduh di bawah ini:';
         }
     }
 </script>
