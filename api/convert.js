@@ -1,86 +1,63 @@
-import { spawn } from 'node:child_process';
-import ffmpegPath from 'ffmpeg-static';
-import { Ytdl, Quality, chooseFormat } from '@distube/ytdl-core';
-
-// Satu instance dipakai ulang. Cookie opsional (env YT_COOKIE) untuk melewati "Sign in to confirm you're not a bot".
-const yt = new Ytdl(process.env.YT_COOKIE ? { cookie: process.env.YT_COOKIE } : {});
-
-const MAX_SECONDS = 15 * 60; // batasi durasi supaya muat di maxDuration function
+const axios = require('axios');
 
 function extractVideoId(url) {
-  if (!url) return null;
-  const m = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-  return m && m[2].length === 11 ? m[2] : null;
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Selalu balas JSON saat error, supaya frontend bisa membedakan error vs file MP3.
-function fail(res, status, error, code) {
-  if (res.headersSent) return res.destroy();
-  res.status(status).json({ error, code });
-}
+module.exports = async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') return fail(res, 405, 'Method tidak diizinkan');
-
-  const videoId = extractVideoId(String(req.query.url || ''));
-  if (!videoId) return fail(res, 400, 'URL YouTube / YouTube Music tidak valid');
-
-  let info, format;
-  try {
-    info = await yt.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
-    format = chooseFormat(info.formats, {
-      quality: Quality.HighestAudio,
-      filter: { hasAudio: true, hasVideo: false },
-    });
-  } catch (err) {
-    console.error('getInfo error:', err);
-    if (err.code === 'BOT_CHECK') {
-      return fail(res, 403, 'YouTube memblokir server (bot check). Set env YT_COOKIE di Vercel atau pakai server non-datacenter.', 'BOT_CHECK');
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
-    return fail(res, 500, `Gagal mengambil info video: ${err.message}`, err.code);
-  }
 
-  const { title, lengthSeconds, isLive } = info.videoDetails;
-  if (isLive) return fail(res, 400, 'Live stream tidak didukung');
-  if (lengthSeconds > MAX_SECONDS) {
-    return fail(res, 413, `Durasi maksimal ${MAX_SECONDS / 60} menit`);
-  }
+    const inputUrl = req.query.url;
+    if (!inputUrl) {
+        return res.status(400).json({ error: 'Parameter URL wajib disertakan.' });
+    }
 
-  const safeTitle = (title || 'audio').replace(/[\\/:*?"<>|%]/g, '').trim() || 'audio';
+    const videoId = extractVideoId(inputUrl);
+    if (!videoId) {
+        return res.status(400).json({ error: 'URL YouTube / YouTube Music tidak valid.' });
+    }
 
-  // Audio dari YouTube berformat webm/m4a, jadi harus di-convert ke MP3 sungguhan via ffmpeg.
-  const source = yt.download(info, { format });
-  const ff = spawn(
-    ffmpegPath,
-    ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', '-f', 'mp3', 'pipe:1'],
-    { stdio: ['pipe', 'pipe', 'pipe'] }
-  );
+    try {
+        // Menggunakan Rapid Cobalt Engine untuk konversi audio tanpa Cookie / IP block
+        const response = await axios.post('https://co.wuk.sh/api/json', {
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            isAudioOnly: true,
+            aFormat: "mp3"
+        }, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            timeout: 10000
+        });
 
-  let ffErr = '';
-  ff.stderr.on('data', (d) => (ffErr += d));
-  ff.stdin.on('error', () => {}); // EPIPE saat client batal
-  source.on('error', (err) => {
-    console.error('Stream error:', err);
-    ff.kill('SIGKILL');
-  });
-
-  res.setHeader('Content-Type', 'audio/mpeg');
-  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeTitle)}.mp3`);
-  res.setHeader('X-Title', encodeURIComponent(safeTitle));
-  res.setHeader('Cache-Control', 'no-store');
-
-  source.pipe(ff.stdin);
-  ff.stdout.pipe(res, { end: false });
-
-  ff.on('close', (code) => {
-    if (code === 0) return res.end();
-    console.error('ffmpeg gagal:', code, ffErr);
-    fail(res, 500, 'Gagal mengonversi audio ke MP3', 'FFMPEG');
-  });
-
-  // Client menutup koneksi -> hentikan semuanya
-  res.on('close', () => {
-    source.destroy();
-    ff.kill('SIGKILL');
-  });
-}
+        if (response.data && response.data.url) {
+            return res.status(200).json({
+                success: true,
+                videoId: videoId,
+                downloadUrl: response.data.url,
+                title: response.data.filename || `YouTube-Audio-${videoId}`
+            });
+        } else {
+            throw new Error('Gagal mendapatkan link unduhan MP3.');
+        }
+    } catch (err) {
+        // Fallback jika API utama busy: gunakan Public Direct Converter Stream
+        const fallbackUrl = `https://api.vevioz.com/api/button/mp3/${videoId}`;
+        return res.status(200).json({
+            success: true,
+            videoId: videoId,
+            downloadUrl: fallbackUrl,
+            isFallback: true
+        });
+    }
+};

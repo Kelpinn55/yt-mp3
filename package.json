@@ -2,11 +2,12 @@
   "name": "yt-music-mp3-converter",
   "version": "2.0.0",
   "private": true,
-  "type": "module",
-  "description": "YouTube & YouTube Music to MP3 converter (Vercel serverless + ytdl-core + ffmpeg)",
-  "engines": { "node": "24.x" },
+  "description": "YouTube & YouTube Music to MP3 Converter for Vercel Serverless",
+  "scripts": {
+    "start": "node api/convert.js"
+  },
   "dependencies": {
-    "@distube/ytdl-core": "^5.0.0",
-    "ffmpeg-static": "^5.2.0"
+    "axios": "^1.7.9",
+    "cors": "^2.8.5"
   }
 }

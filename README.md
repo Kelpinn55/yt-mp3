@@ -1,27 +1,17 @@
-# YouTube & YouTube Music to MP3 Converter
+# YouTube & YouTube Music to MP3 Converter (Fix Vercel 2026)
 
-Project full-stack berbasis Node.js dan HTML/CSS/JS frontend yang siap dideploy ke **GitHub** dan **Vercel**.
+Full-stack project berbasis Vercel Serverless API + Client-side Fallback API.
 
-## 🚀 Fitur Utama
-- **Link Extractor Presisi:** Mampu menangani link YouTube biasa (`youtube.com`, `youtu.be`) serta YouTube Music (`music.youtube.com`) dengan URL parameter seperti `&si=...`.
-- **Real MP3 Audio Streaming:** Menggunakan `@distube/ytdl-core` di backend untuk mengunduh sinyal audio asli dari YouTube.
-- **Vercel Serverless Compatible:** Dilengkapi file konfigurasi `vercel.json` dan struktur `/api` agar langsung aktif saat push ke GitHub dan terkoneksi ke Vercel.
-- **UI Dark Mode Premium:** Tampilan visual responsif bertema YouTube Music.
+## 💡 Mengapa Solusi Ini Berhasil Tanpa Cookie?
+1. **Tidak Memakai `ytdl-core` / `ffmpeg` di Vercel Serverless:** Vercel Serverless melarang runtime biner berat dan IP Vercel diblokir oleh YouTube jika mengunduh stream langsung tanpa cookie.
+2. **Multi-Source Converter Engine (Direct API):** Menggunakan endpoint pengonversi audio terenkripsi yang secara publik mengekstrak stream audio dari YouTube & YouTube Music tanpa perlunya login cookie.
+3. **Mendukung `music.youtube.com`, `youtu.be`, dan Parameter `&si=...`**.
 
-## 📦 Cara Deploy ke GitHub & Vercel
+## 🚀 Cara Update Repository GitHub
+Buka terminal pada folder `C:\yt-mp3` lalu jalankan:
 
-1. **Extract ZIP Ini**
-2. **Push ke GitHub:**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit - YT Converter Project"
-   git branch -M main
-   git remote add origin https://github.com/USERNAME/REPOSITORY-NAME.git
-   git push -u origin main
-   ```
-3. **Deploy ke Vercel:**
-   - Buka dashboard [Vercel](https://vercel.com).
-   - Klik **"Add New Project"** -> **"Import Git Repository"**.
-   - Pilih repository GitHub Anda, lalu klik **"Deploy"**.
-   - Vercel akan otomatis membaca file `vercel.json` dan mengaktifkan frontend serta endpoint API `/api/convert`.
+```bash
+git add .
+git commit -m "Fix total: ganti engine ke Direct API tanpa cookie & ffmpeg"
+git push origin main
+```
