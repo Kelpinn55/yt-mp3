@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube & YT Music MP3 Converter</title>
+    <title>YouTube & YT Music MP3 Downloader</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #030303;
-            --card-bg: #121212;
-            --border-color: #282828;
-            --primary-red: #ff0000;
-            --text-primary: #ffffff;
-            --text-secondary: #aaa;
+            --bg: #0f0f0f;
+            --card: #1f1f1f;
+            --accent: #ff0000;
+            --accent-hover: #cc0000;
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
+            --success: #28a745;
+            --success-hover: #218838;
         }
 
         * {
@@ -23,46 +25,42 @@
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             padding: 20px;
         }
 
         .container {
-            width: 100%;
             max-width: 600px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
+            width: 100%;
+            background: var(--card);
+            border: 1px solid #282828;
+            padding: 40px 30px;
             border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-        }
-
-        .header {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
             text-align: center;
-            margin-bottom: 28px;
         }
 
-        .header i {
+        .header-icon {
             font-size: 48px;
-            color: var(--primary-red);
+            color: var(--accent);
             margin-bottom: 12px;
         }
 
-        .header h1 {
+        h1 {
             font-size: 24px;
-            font-weight: 700;
             margin-bottom: 8px;
+            font-weight: 700;
         }
 
-        .header p {
-            color: var(--text-secondary);
+        p.subtitle {
+            color: var(--text-muted);
             font-size: 14px;
+            margin-bottom: 28px;
         }
 
         .input-group {
@@ -73,10 +71,10 @@
 
         input[type="text"] {
             flex: 1;
-            padding: 14px 18px;
+            padding: 15px 18px;
             border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: #1f1f1f;
+            border: 1px solid #333;
+            background: #121212;
             color: #fff;
             font-size: 15px;
             outline: none;
@@ -84,43 +82,80 @@
         }
 
         input[type="text"]:focus {
-            border-color: var(--primary-red);
+            border-color: var(--accent);
         }
 
         button.btn-convert {
-            padding: 14px 24px;
+            padding: 15px 25px;
             border-radius: 8px;
-            background: var(--primary-red);
-            color: #fff;
+            background: var(--accent);
+            color: white;
             border: none;
-            font-weight: 600;
+            font-weight: bold;
             font-size: 15px;
             cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: background 0.2s;
         }
 
         button.btn-convert:hover {
-            background: #cc0000;
+            background: var(--accent-hover);
         }
 
-        .preview-card {
-            display: none;
-            background: #181818;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
+        #statusMsg {
             margin-top: 15px;
-            text-align: center;
+            font-size: 14px;
+            color: var(--text-muted);
         }
 
-        .preview-card img {
+        /* Styling Progress Bar */
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-bg {
             width: 100%;
-            max-width: 260px;
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        /* Preview & Result Card */
+        #resultCard {
+            margin-top: 25px;
+            background: #141414;
+            padding: 24px;
+            border-radius: 12px;
+            display: none;
+            border: 1px solid #2a2a2a;
+        }
+
+        .thumb {
+            width: 100%;
+            max-width: 250px;
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 15px;
             box-shadow: 0 4px 14px rgba(0,0,0,0.6);
         }
 
@@ -129,141 +164,175 @@
             font-weight: 600;
             margin-bottom: 16px;
             color: #fff;
+            word-break: break-word;
         }
 
-        .engine-title {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-engine {
-            display: flex;
+        .btn-download {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             width: 100%;
             padding: 14px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 15px;
+            background: var(--success);
+            color: white;
             text-decoration: none;
-            color: #fff;
-            transition: transform 0.15s, opacity 0.2s;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.2s;
+            border: none;
+            cursor: pointer;
         }
 
-        .btn-engine:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        .btn-ssyoutube {
-            background: #2b5cff;
-        }
-
-        .btn-y2mate {
-            background: #00a859;
-        }
-
-        .btn-ytmp3 {
-            background: #e67e22;
-        }
-
-        .status-msg {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ff5555;
-            text-align: center;
+        .btn-download:hover {
+            background: var(--success-hover);
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <i class="fab fa-youtube"></i>
-        <h1>YouTube & YT Music MP3 Downloader</h1>
-        <p>Konversi Cepat ke MP3 (Support SSYouTube & Y2Mate.gs)</p>
-    </div>
+    <i class="fab fa-youtube header-icon"></i>
+    <h1>YT & YT Music MP3 Downloader</h1>
+    <p class="subtitle">In-App Direct Converter (Powered by Public CORS API)</p>
 
     <div class="input-group">
-        <input type="text" id="ytUrl" placeholder="Tempel link https://music.youtube.com/watch?v=..." />
-        <button class="btn-convert" onclick="processConversion()">
-            <i class="fas fa-sync-alt"></i> Process
+        <input type="text" id="urlInput" placeholder="Tempel link YouTube / YT Music di sini..." autocomplete="off">
+        <button class="btn-convert" id="convertBtn" onclick="startInAppConversion()">
+            <i class="fas fa-sync-alt"></i> Convert
         </button>
     </div>
 
-    <div class="status-msg" id="statusMsg"></div>
+    <!-- Live Progress Bar -->
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-label">
+            <span id="progressText">Menyiapkan konversi...</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+    </div>
 
-    <div class="preview-card" id="previewCard">
-        <img id="thumbImg" src="" alt="Thumbnail Lagu">
-        <div class="song-title" id="songTitle">Lagu Terdeteksi</div>
+    <div id="statusMsg"></div>
 
-        <div class="engine-title">Pilih Mesin Unduh MP3:</div>
-
-        <!-- Engine 1: SSYouTube Direct Link -->
-        <a id="ssyoutubeBtn" class="btn-engine btn-ssyoutube" href="#" target="_blank">
-            <i class="fas fa-bolt"></i> Unduh via SSYouTube
-        </a>
-
-        <!-- Engine 2: Y2Mate.gs Direct Link -->
-        <a id="y2mateBtn" class="btn-engine btn-y2mate" href="#" target="_blank">
-            <i class="fas fa-music"></i> Unduh via Y2Mate.gs
-        </a>
-
-        <!-- Engine 3: YTMP3 Direct Link -->
-        <a id="ytmp3Btn" class="btn-engine btn-ytmp3" href="#" target="_blank">
-            <i class="fas fa-download"></i> Unduh via YTmp3
+    <div id="resultCard">
+        <img id="thumbnail" class="thumb" src="" alt="Thumbnail Lagu">
+        <div id="songTitle" class="song-title">Judul Lagu</div>
+        <a id="downloadLinkBtn" class="btn-download" href="#" target="_blank" download>
+            <i class="fas fa-download"></i> Unduh File MP3 Asli
         </a>
     </div>
 </div>
 
 <script>
+    let pollInterval = null;
+
     function extractVideoId(url) {
         if (!url) return null;
-        // Regex presisi memisahkan ID 11 karakter dari parameter &si=... dan domain YT Music
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function processConversion() {
-        const urlInput = document.getElementById('ytUrl').value.trim();
+    async function startInAppConversion() {
+        const urlInput = document.getElementById('urlInput').value.trim();
         const statusMsg = document.getElementById('statusMsg');
-        const previewCard = document.getElementById('previewCard');
-        const thumbImg = document.getElementById('thumbImg');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const resultCard = document.getElementById('resultCard');
+        const thumbnail = document.getElementById('thumbnail');
+        const songTitle = document.getElementById('songTitle');
+        const downloadLinkBtn = document.getElementById('downloadLinkBtn');
 
-        const ssyoutubeBtn = document.getElementById('ssyoutubeBtn');
-        const y2mateBtn = document.getElementById('y2mateBtn');
-        const ytmp3Btn = document.getElementById('ytmp3Btn');
+        if (pollInterval) clearInterval(pollInterval);
 
-        statusMsg.innerText = '';
-        previewCard.style.display = 'none';
-
-        const videoId = extractVideoId(urlInput);
-        if (!videoId) {
-            statusMsg.innerText = 'URL YouTube / YouTube Music tidak valid! Pastikan format link benar.';
+        if (!urlInput) {
+            statusMsg.style.color = '#ff4444';
+            statusMsg.innerText = 'Masukkan URL YouTube / YouTube Music terlebih dahulu!';
             return;
         }
 
-        const standardYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        const videoId = extractVideoId(urlInput);
+        if (!videoId) {
+            statusMsg.style.color = '#ff4444';
+            statusMsg.innerText = 'URL tidak valid! Pastikan format link YouTube benar.';
+            resultCard.style.display = 'none';
+            progressContainer.style.display = 'none';
+            return;
+        }
 
-        // Set Thumbnail YouTube HQ
-        thumbImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        const cleanYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        
+        // Reset UI State
+        statusMsg.innerText = '';
+        resultCard.style.display = 'none';
+        progressContainer.style.display = 'block';
+        progressBarFill.style.width = '5%';
+        progressPercent.innerText = '5%';
+        progressText.innerText = 'Menghubungkan ke API Konversi...';
 
-        // 1. Link Integrasi SSYouTube
-        ssyoutubeBtn.href = `https://ssyoutube.com/watch?v=${videoId}`;
+        thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-        // 2. Link Integrasi Y2Mate.gs
-        y2mateBtn.href = `https://y2mate.is/watch?v=${videoId}`;
+        try {
+            // Step 1: Inisialisasi Job Konversi ke Loader.to CORS API
+            const searchApiUrl = `https://loader.to/api/ajax/search.php?format=mp3&url=${encodeURIComponent(cleanYtUrl)}`;
+            const response = await fetch(searchApiUrl);
+            const data = await response.json();
 
-        // 3. Link Integrasi YTmp3
-        ytmp3Btn.href = `https://ytmp3.mobi/watch?v=${videoId}`;
+            if (!data || !data.id) {
+                throw new Error('Gagal memulai antrean konversi.');
+            }
 
-        previewCard.style.display = 'block';
+            const jobId = data.id;
+            if (data.title) songTitle.innerText = data.title;
+
+            // Step 2: Polling Progress Konversi
+            pollInterval = setInterval(async () => {
+                try {
+                    const progressApiUrl = `https://loader.to/api/ajax/progress.php?id=${jobId}`;
+                    const pRes = await fetch(progressApiUrl);
+                    const pData = await pRes.json();
+
+                    if (pData.title) songTitle.innerText = pData.title;
+
+                    if (pData.progress) {
+                        // Progress Loader.to dikembalikan dari skala 0 - 1000
+                        const currentPercent = Math.min(Math.round(pData.progress / 10), 100);
+                        progressBarFill.style.width = `${currentPercent}%`;
+                        progressPercent.innerText = `${currentPercent}%`;
+                        progressText.innerText = pData.text || 'Mengonversi Audio MP3...';
+                    }
+
+                    // Step 3: Jika konversi selesai & URL unduhan tersedia
+                    if (pData.download_url || pData.progress >= 1000) {
+                        clearInterval(pollInterval);
+                        progressBarFill.style.width = '100%';
+                        progressPercent.innerText = '100%';
+                        progressText.innerText = 'Konversi Selesai!';
+
+                        downloadLinkBtn.href = pData.download_url;
+                        
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            resultCard.style.display = 'block';
+                            statusMsg.style.color = '#28a745';
+                            statusMsg.innerText = 'File MP3 berhasil dibuat! Klik tombol di bawah untuk mengunduh.';
+                        }, 500);
+                    }
+                } catch (err) {
+                    console.warn('Polling status error:', err);
+                }
+            }, 1500);
+
+        } catch (error) {
+            progressContainer.style.display = 'none';
+            statusMsg.style.color = '#ff4444';
+            statusMsg.innerText = 'Gagal memproses lagu: ' + error.message;
+        }
     }
 </script>
 
