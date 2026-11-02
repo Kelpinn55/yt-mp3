@@ -170,6 +170,7 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+            button.btn-convert:disabled { opacity: .6; cursor: wait; }
     </style>
 </head>
 <body>
@@ -183,7 +184,7 @@
 
     <div class="input-group">
         <input type="text" id="ytUrl" placeholder="Tempel link https://music.youtube.com/watch?v=..." />
-        <button class="btn-convert" onclick="processConversion()">
+        <button class="btn-convert" id="btnConvert" onclick="processConversion()">
             <i class="fas fa-download"></i> Unduh
         </button>
     </div>
@@ -208,13 +209,17 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function processConversion() {
+    let objectUrl = null;
+
+    async function processConversion() {
         const urlInput = document.getElementById('ytUrl').value.trim();
         const statusMsg = document.getElementById('statusMsg');
         const spinner = document.getElementById('loadingSpinner');
         const previewCard = document.getElementById('previewCard');
         const thumbImg = document.getElementById('thumbImg');
+        const songTitle = document.getElementById('songTitle');
         const downloadBtn = document.getElementById('downloadBtn');
+        const btn = document.getElementById('btnConvert');
 
         previewCard.style.display = 'none';
         statusMsg.innerText = '';
@@ -226,19 +231,43 @@
             return;
         }
 
-        statusMsg.style.color = '#aaa';
-        statusMsg.innerText = 'Menyiapkan stream MP3 asli dari YouTube...';
+        btn.disabled = true;
         spinner.style.display = 'block';
+        statusMsg.style.color = '#aaa';
+        statusMsg.innerText = 'Mengunduh & mengonversi ke MP3, mohon tunggu (bisa sampai 1 menit)...';
 
-        const apiEndpoint = `/api/convert?url=${encodeURIComponent(urlInput)}`;
+        try {
+            const res = await fetch(`/api/convert?url=${encodeURIComponent(urlInput)}`);
+            const type = res.headers.get('content-type') || '';
 
-        setTimeout(() => {
-            spinner.style.display = 'none';
+            // Kalau bukan audio, berarti server mengirim error -> tampilkan, jangan didownload
+            if (!res.ok || !type.includes('audio/mpeg')) {
+                let msg = `Server error (${res.status})`;
+                try { msg = (await res.json()).error || msg; } catch (_) {}
+                throw new Error(msg);
+            }
+
+            const blob = await res.blob();
+            const title = decodeURIComponent(res.headers.get('X-Title') || 'audio');
+
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = URL.createObjectURL(blob);
+
             thumbImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-            downloadBtn.href = apiEndpoint;
+            songTitle.innerText = title;
+            downloadBtn.href = objectUrl;
+            downloadBtn.download = `${title}.mp3`;
             previewCard.style.display = 'block';
-            statusMsg.innerText = 'Audio MP3 asli berhasil disiapkan!';
-        }, 1200);
+            statusMsg.innerText = 'MP3 berhasil dibuat! Klik "Simpan File MP3".';
+        } catch (err) {
+            statusMsg.style.color = '#ff5555';
+            statusMsg.innerText = err instanceof TypeError
+                ? 'Koneksi terputus saat konversi. Coba lagi.'
+                : err.message;
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        }
     }
 </script>
 
