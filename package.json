@@ -1,13 +1,9 @@
 {
-  "name": "yt-music-mp3-converter",
-  "version": "2.0.0",
+  "name": "yt-mp3-ultimate",
+  "version": "3.0.0",
   "private": true,
-  "description": "YouTube & YouTube Music to MP3 Converter for Vercel Serverless",
+  "description": "YouTube to MP3 Converter - Zero Vercel Error Version",
   "scripts": {
     "start": "node api/convert.js"
-  },
-  "dependencies": {
-    "axios": "^1.7.9",
-    "cors": "^2.8.5"
   }
 }

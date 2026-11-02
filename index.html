@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube to MP3 Super Converter</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --card: #1f1f1f;
+            --accent: #ff0000;
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: var(--card); padding: 40px 30px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; }
+        h1 { font-size: 24px; margin-bottom: 10px; }
+        p { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        input { flex: 1; min-width: 200px; padding: 15px; border-radius: 8px; border: 1px solid #333; background: #121212; color: #fff; font-size: 16px; outline: none; }
+        input:focus { border-color: var(--accent); }
+        button { padding: 15px 25px; border-radius: 8px; background: var(--accent); color: white; border: none; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        button:hover { background: #d00000; }
+        #statusMsg { margin-top: 20px; font-size: 14px; }
+        #resultCard { margin-top: 25px; background: #121212; padding: 20px; border-radius: 12px; display: none; border: 1px solid #333; }
+        .thumb { width: 100%; max-width: 250px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        iframe { width: 100%; height: 80px; border: none; overflow: hidden; margin-top: 10px; }
+        .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <i class="fab fa-youtube" style="font-size: 50px; color: var(--accent); margin-bottom: 15px;"></i>
+    <h1>YT & Music to MP3 Converter</h1>
+    <p>Konversi anti-gagal, tanpa cookie, dan tanpa error 405.</p>
+
+    <div class="input-group">
+        <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
+        <button id="convertBtn" onclick="mulaiKonversi()"><i class="fas fa-sync-alt"></i> Convert</button>
+    </div>
+
+    <div class="loader" id="loader"></div>
+    <div id="statusMsg"></div>
+
+    <div id="resultCard">
+        <img id="thumbnail" class="thumb" src="" alt="Thumbnail">
+        <h3 style="margin-bottom: 5px; font-size:16px;">Lagu Siap Diunduh!</h3>
+        <p style="font-size:12px; margin-bottom:15px;">Klik tombol di bawah ini (Pilih kualitas MP3):</p>
+        <!-- Iframe widget download langsung disematkan di sini -->
+        <iframe id="downloadWidget" scrolling="no"></iframe>
+    </div>
+</div>
+
+<script>
+    async function mulaiKonversi() {
+        const url = document.getElementById('urlInput').value.trim();
+        const loader = document.getElementById('loader');
+        const statusMsg = document.getElementById('statusMsg');
+        const resultCard = document.getElementById('resultCard');
+        const thumbnail = document.getElementById('thumbnail');
+        const downloadWidget = document.getElementById('downloadWidget');
+
+        if (!url) {
+            statusMsg.style.color = '#ff4444';
+            statusMsg.innerText = 'Masukkan URL terlebih dahulu!';
+            return;
+        }
+
+        // Reset UI
+        resultCard.style.display = 'none';
+        statusMsg.innerText = 'Memproses permintaan ke Vercel Serverless...';
+        statusMsg.style.color = '#aaa';
+        loader.style.display = 'block';
+
+        try {
+            // Memanggil endpoint Vercel menggunakan GET standard
+            const response = await fetch(`/api/convert?url=${encodeURIComponent(url)}`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            const data = await response.json();
+            loader.style.display = 'none';
+
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP Error ${response.status}`);
+            }
+
+            if (data.success) {
+                statusMsg.innerText = '';
+                thumbnail.src = `https://img.youtube.com/vi/${data.videoId}/hqdefault.jpg`;
+                downloadWidget.src = data.embedUrl;
+                resultCard.style.display = 'block';
+            } else {
+                throw new Error('Terjadi kesalahan yang tidak diketahui.');
+            }
+
+        } catch (error) {
+            loader.style.display = 'none';
+            statusMsg.style.color = '#ff4444';
+            statusMsg.innerText = `Error: ${error.message}`;
+            console.error('Error:', error);
+        }
+    }
+</script>
+
+</body>
+</html>

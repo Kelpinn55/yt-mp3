@@ -1,70 +1,37 @@
-const axios = require('axios');
-
-function extractVideoId(url) {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-}
-
-module.exports = async (req, res) => {
-    // Header CORS agar dapat diakses dari mana saja
+module.exports = (req, res) => {
+    // 1. Tangani CORS secara penuh
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    // Tangani Preflight CORS
+    // 2. Tangani preflight request (OPTIONS)
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    // Tolak metode selain GET dan POST
-    if (req.method !== 'GET' && req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
+    // 3. Ambil URL dari query (GET) atau body (POST)
+    const url = req.query.url || (req.body && req.body.url);
+
+    if (!url) {
+        return res.status(400).json({ error: 'URL YouTube atau YT Music wajib diisi.' });
     }
 
-    // Ambil parameter URL dari Query String (GET) atau Body (POST)
-    const inputUrl = req.query.url || (req.body && req.body.url);
-    if (!inputUrl) {
-        return res.status(400).json({ error: 'Parameter URL wajib disertakan.' });
-    }
+    // 4. Ekstrak Video ID (Support youtu.be, youtube.com, music.youtube.com, &si=...)
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[2].length === 11) ? match[2] : null;
 
-    const videoId = extractVideoId(inputUrl);
     if (!videoId) {
-        return res.status(400).json({ error: 'URL YouTube / YouTube Music tidak valid.' });
+        return res.status(400).json({ error: 'Format URL tidak valid.' });
     }
 
-    try {
-        const response = await axios.post('https://co.wuk.sh/api/json', {
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            isAudioOnly: true,
-            aFormat: "mp3"
-        }, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            timeout: 10000
-        });
+    // 5. Kembalikan link ke penyedia konversi pihak ketiga yang stabil (Iframe Button)
+    // Menggunakan penyedia publik yang mengizinkan embed tanpa blokir Vercel IP
+    const embedUrl = `https://api.vevioz.com/api/button/mp3/${videoId}`;
 
-        if (response.data && response.data.url) {
-            return res.status(200).json({
-                success: true,
-                videoId: videoId,
-                downloadUrl: response.data.url,
-                title: response.data.filename || `YouTube-Audio-${videoId}`
-            });
-        } else {
-            throw new Error('Gagal mendapatkan link unduhan MP3.');
-        }
-    } catch (err) {
-        // Fallback jika API utama sibuk
-        const fallbackUrl = `https://api.vevioz.com/api/button/mp3/${videoId}`;
-        return res.status(200).json({
-            success: true,
-            videoId: videoId,
-            downloadUrl: fallbackUrl,
-            isFallback: true
-        });
-    }
+    return res.status(200).json({
+        success: true,
+        videoId: videoId,
+        embedUrl: embedUrl
+    });
 };
