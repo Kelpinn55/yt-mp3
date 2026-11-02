@@ -8,7 +8,6 @@ function extractVideoId(url) {
 }
 
 module.exports = async (req, res) => {
-    // Handling CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -18,33 +17,54 @@ module.exports = async (req, res) => {
     }
 
     const inputUrl = req.query.url;
-    if (!inputUrl) {
-        return res.status(400).json({ error: 'Parameter URL wajib disertakan' });
-    }
-
     const videoId = extractVideoId(inputUrl);
+
     if (!videoId) {
-        return res.status(400).json({ error: 'URL YouTube / YouTube Music tidak valid' });
+        return res.status(400).send('URL tidak valid');
     }
 
     const targetUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     try {
-        const info = await ytdl.getInfo(targetUrl);
+        // Menggunakan OUserAgent & UserOptions untuk menghindari blokir IP Vercel
+        const info = await ytdl.getInfo(targetUrl, {
+            requestOptions: {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            }
+        });
+
         const title = info.videoDetails.title.replace(/[^\w\s-]/gi, '') || 'audio';
 
+        // Header MP3 yang valid
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(title)}.mp3"`);
 
-        // Stream audio asli dari YouTube ke client/browser
-        ytdl(targetUrl, {
+        const stream = ytdl(targetUrl, {
             filter: 'audioonly',
             quality: 'highestaudio',
-            highWaterMark: 1 << 25
-        }).pipe(res);
+            highWaterMark: 1 << 25,
+            requestOptions: {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            }
+        });
+
+        stream.pipe(res);
+
+        stream.on('error', (err) => {
+            console.error('Stream Error:', err);
+            if (!res.headersSent) {
+                res.status(500).send('Gagal mengambil stream audio');
+            }
+        });
 
     } catch (error) {
-        console.error('YTDL Error:', error);
-        return res.status(500).json({ error: 'Gagal memproses audio dari YouTube', details: error.message });
+        console.error('YTDL Fetch Error:', error);
+        if (!res.headersSent) {
+            res.status(500).send(`Server Error: ${error.message}`);
+        }
     }
 };
