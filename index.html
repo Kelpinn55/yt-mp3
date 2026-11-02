@@ -3,87 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube & YT Music MP3 Downloader</title>
+    <title>YouTube & YT Music MP3 Converter</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f0f0f;
-            --card: #1f1f1f;
-            --accent: #ff0000;
-            --text: #ffffff;
-            --text-muted: #aaaaaa;
+            --bg-color: #030303;
+            --card-bg: #121212;
+            --border-color: #282828;
+            --primary-red: #ff0000;
+            --text-primary: #ffffff;
+            --text-secondary: #aaa;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; background: var(--card); padding: 40px 30px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; }
-        h1 { font-size: 24px; margin-bottom: 10px; }
-        p { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
-        .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
-        input { flex: 1; min-width: 200px; padding: 15px; border-radius: 8px; border: 1px solid #333; background: #121212; color: #fff; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--accent); }
-        button { padding: 15px 25px; border-radius: 8px; background: var(--accent); color: white; border: none; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
-        button:hover { background: #d00000; }
-        #statusMsg { margin-top: 20px; font-size: 14px; }
-        #resultCard { margin-top: 25px; background: #121212; padding: 20px; border-radius: 12px; display: none; border: 1px solid #333; }
-        .thumb { width: 100%; max-width: 250px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        iframe { width: 100%; height: 160px; border: none; overflow: hidden; margin-top: 10px; border-radius: 8px; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header i {
+            font-size: 48px;
+            color: var(--primary-red);
+            margin-bottom: 12px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #1f1f1f;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-red);
+        }
+
+        button.btn-convert {
+            padding: 14px 24px;
+            border-radius: 8px;
+            background: var(--primary-red);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        button.btn-convert:hover {
+            background: #cc0000;
+        }
+
+        .preview-card {
+            display: none;
+            background: #181818;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .preview-card img {
+            width: 100%;
+            max-width: 260px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+        }
+
+        .song-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .engine-title {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-engine {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            color: #fff;
+            transition: transform 0.15s, opacity 0.2s;
+        }
+
+        .btn-engine:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-ssyoutube {
+            background: #2b5cff;
+        }
+
+        .btn-y2mate {
+            background: #00a859;
+        }
+
+        .btn-ytmp3 {
+            background: #e67e22;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ff5555;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <i class="fab fa-youtube" style="font-size: 50px; color: var(--accent); margin-bottom: 15px;"></i>
-    <h1>YT & YT Music MP3 Downloader</h1>
-    <p>Konversi MP3 Cepat & Bebas Error Server Vercel</p>
-
-    <div class="input-group">
-        <input type="text" id="urlInput" placeholder="Tempel link YouTube / YT Music di sini..." autocomplete="off">
-        <button id="convertBtn" onclick="prosesKonversi()"><i class="fas fa-download"></i> Convert</button>
+    <div class="header">
+        <i class="fab fa-youtube"></i>
+        <h1>YouTube & YT Music MP3 Downloader</h1>
+        <p>Konversi Cepat ke MP3 (Support SSYouTube & Y2Mate.gs)</p>
     </div>
 
-    <div id="statusMsg"></div>
+    <div class="input-group">
+        <input type="text" id="ytUrl" placeholder="Tempel link https://music.youtube.com/watch?v=..." />
+        <button class="btn-convert" onclick="processConversion()">
+            <i class="fas fa-sync-alt"></i> Process
+        </button>
+    </div>
 
-    <div id="resultCard">
-        <img id="thumbnail" class="thumb" src="" alt="Thumbnail">
-        <h3 style="margin-bottom: 8px; font-size:16px;">Pilih Kualitas MP3:</h3>
-        <iframe id="downloadWidget" scrolling="no"></iframe>
+    <div class="status-msg" id="statusMsg"></div>
+
+    <div class="preview-card" id="previewCard">
+        <img id="thumbImg" src="" alt="Thumbnail Lagu">
+        <div class="song-title" id="songTitle">Lagu Terdeteksi</div>
+
+        <div class="engine-title">Pilih Mesin Unduh MP3:</div>
+
+        <!-- Engine 1: SSYouTube Direct Link -->
+        <a id="ssyoutubeBtn" class="btn-engine btn-ssyoutube" href="#" target="_blank">
+            <i class="fas fa-bolt"></i> Unduh via SSYouTube
+        </a>
+
+        <!-- Engine 2: Y2Mate.gs Direct Link -->
+        <a id="y2mateBtn" class="btn-engine btn-y2mate" href="#" target="_blank">
+            <i class="fas fa-music"></i> Unduh via Y2Mate.gs
+        </a>
+
+        <!-- Engine 3: YTMP3 Direct Link -->
+        <a id="ytmp3Btn" class="btn-engine btn-ytmp3" href="#" target="_blank">
+            <i class="fas fa-download"></i> Unduh via YTmp3
+        </a>
     </div>
 </div>
 
 <script>
     function extractVideoId(url) {
         if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        // Regex presisi memisahkan ID 11 karakter dari parameter &si=... dan domain YT Music
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function prosesKonversi() {
-        const url = document.getElementById('urlInput').value.trim();
+    function processConversion() {
+        const urlInput = document.getElementById('ytUrl').value.trim();
         const statusMsg = document.getElementById('statusMsg');
-        const resultCard = document.getElementById('resultCard');
-        const thumbnail = document.getElementById('thumbnail');
-        const downloadWidget = document.getElementById('downloadWidget');
+        const previewCard = document.getElementById('previewCard');
+        const thumbImg = document.getElementById('thumbImg');
 
-        if (!url) {
-            statusMsg.style.color = '#ff4444';
-            statusMsg.innerText = 'Masukkan URL terlebih dahulu!';
-            return;
-        }
+        const ssyoutubeBtn = document.getElementById('ssyoutubeBtn');
+        const y2mateBtn = document.getElementById('y2mateBtn');
+        const ytmp3Btn = document.getElementById('ytmp3Btn');
 
-        const videoId = extractVideoId(url);
-        if (!videoId) {
-            statusMsg.style.color = '#ff4444';
-            statusMsg.innerText = 'URL YouTube / YT Music tidak valid!';
-            resultCard.style.display = 'none';
-            return;
-        }
-
-        // Langsung tampilkan thumbnail dan tombol unduh tanpa melalui server API
         statusMsg.innerText = '';
-        thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        downloadWidget.src = `https://api.vevioz.com/api/button/mp3/${videoId}`;
-        resultCard.style.display = 'block';
+        previewCard.style.display = 'none';
+
+        const videoId = extractVideoId(urlInput);
+        if (!videoId) {
+            statusMsg.innerText = 'URL YouTube / YouTube Music tidak valid! Pastikan format link benar.';
+            return;
+        }
+
+        const standardYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+        // Set Thumbnail YouTube HQ
+        thumbImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+        // 1. Link Integrasi SSYouTube
+        ssyoutubeBtn.href = `https://ssyoutube.com/watch?v=${videoId}`;
+
+        // 2. Link Integrasi Y2Mate.gs
+        y2mateBtn.href = `https://y2mate.is/watch?v=${videoId}`;
+
+        // 3. Link Integrasi YTmp3
+        ytmp3Btn.href = `https://ytmp3.mobi/watch?v=${videoId}`;
+
+        previewCard.style.display = 'block';
     }
 </script>
 
