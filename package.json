@@ -1,0 +1,16 @@
+{
+  "name": "yt-music-mp3-converter",
+  "version": "1.0.0",
+  "description": "YouTube & YouTube Music to MP3 Converter with Serverless Vercel API and YTDL",
+  "main": "api/convert.js",
+  "scripts": {
+    "start": "node api/convert.js"
+  },
+  "keywords": ["youtube", "mp3", "converter", "yt-dlp", "vercel"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@distube/ytdl-core": "^4.15.9",
+    "cors": "^2.8.5"
+  }
+}

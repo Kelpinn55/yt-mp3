@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube & YT Music MP3 Downloader</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #030303;
+            --card-bg: #121212;
+            --border-color: #282828;
+            --primary-red: #ff0000;
+            --text-primary: #ffffff;
+            --text-secondary: #aaa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header i {
+            font-size: 48px;
+            color: var(--primary-red);
+            margin-bottom: 12px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #1f1f1f;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-red);
+        }
+
+        button.btn-convert {
+            padding: 14px 24px;
+            border-radius: 8px;
+            background: var(--primary-red);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        button.btn-convert:hover {
+            background: #cc0000;
+        }
+
+        .preview-card {
+            display: none;
+            background: #181818;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .preview-card img {
+            width: 100%;
+            max-width: 240px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .song-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .download-link {
+            display: inline-block;
+            width: 100%;
+            padding: 14px;
+            background: #272727;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid #3f3f3f;
+            transition: background 0.2s;
+        }
+
+        .download-link:hover {
+            background: #383838;
+            border-color: #555;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .spinner {
+            display: none;
+            margin: 20px auto;
+            width: 36px;
+            height: 36px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <i class="fab fa-youtube"></i>
+        <h1>YouTube & YT Music MP3 Downloader</h1>
+        <p>Unduh file audio MP3 asli langsung dari YouTube dan YouTube Music</p>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="ytUrl" placeholder="Tempel link https://music.youtube.com/watch?v=..." />
+        <button class="btn-convert" onclick="processConversion()">
+            <i class="fas fa-download"></i> Unduh
+        </button>
+    </div>
+
+    <div class="spinner" id="loadingSpinner"></div>
+    <div class="status-msg" id="statusMsg"></div>
+
+    <div class="preview-card" id="previewCard">
+        <img id="thumbImg" src="" alt="Thumbnail">
+        <div class="song-title" id="songTitle">Lagu Siap Diunduh</div>
+        <a id="downloadBtn" class="download-link" href="#" download>
+            <i class="fas fa-file-audio"></i> Simpan File MP3
+        </a>
+    </div>
+</div>
+
+<script>
+    function extractVideoId(url) {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    function processConversion() {
+        const urlInput = document.getElementById('ytUrl').value.trim();
+        const statusMsg = document.getElementById('statusMsg');
+        const spinner = document.getElementById('loadingSpinner');
+        const previewCard = document.getElementById('previewCard');
+        const thumbImg = document.getElementById('thumbImg');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        previewCard.style.display = 'none';
+        statusMsg.innerText = '';
+
+        const videoId = extractVideoId(urlInput);
+        if (!videoId) {
+            statusMsg.style.color = '#ff5555';
+            statusMsg.innerText = 'URL YouTube / YouTube Music tidak valid! Pastikan format link benar.';
+            return;
+        }
+
+        statusMsg.style.color = '#aaa';
+        statusMsg.innerText = 'Menyiapkan stream MP3 asli dari YouTube...';
+        spinner.style.display = 'block';
+
+        const apiEndpoint = `/api/convert?url=${encodeURIComponent(urlInput)}`;
+
+        setTimeout(() => {
+            spinner.style.display = 'none';
+            thumbImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            downloadBtn.href = apiEndpoint;
+            previewCard.style.display = 'block';
+            statusMsg.innerText = 'Audio MP3 asli berhasil disiapkan!';
+        }, 1200);
+    }
+</script>
+
+</body>
+</html>
