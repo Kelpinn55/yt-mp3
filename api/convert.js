@@ -8,15 +8,23 @@ function extractVideoId(url) {
 }
 
 module.exports = async (req, res) => {
+    // Header CORS agar dapat diakses dari mana saja
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    // Tangani Preflight CORS
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    const inputUrl = req.query.url;
+    // Tolak metode selain GET dan POST
+    if (req.method !== 'GET' && req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    // Ambil parameter URL dari Query String (GET) atau Body (POST)
+    const inputUrl = req.query.url || (req.body && req.body.url);
     if (!inputUrl) {
         return res.status(400).json({ error: 'Parameter URL wajib disertakan.' });
     }
@@ -27,7 +35,6 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // Menggunakan Rapid Cobalt Engine untuk konversi audio tanpa Cookie / IP block
         const response = await axios.post('https://co.wuk.sh/api/json', {
             url: `https://www.youtube.com/watch?v=${videoId}`,
             isAudioOnly: true,
@@ -51,7 +58,7 @@ module.exports = async (req, res) => {
             throw new Error('Gagal mendapatkan link unduhan MP3.');
         }
     } catch (err) {
-        // Fallback jika API utama busy: gunakan Public Direct Converter Stream
+        // Fallback jika API utama sibuk
         const fallbackUrl = `https://api.vevioz.com/api/button/mp3/${videoId}`;
         return res.status(200).json({
             success: true,
